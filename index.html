@@ -1,0 +1,683 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEON BOUNCE - Juego 2D</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 25px 12px;
+    min-height: 100vh;
+    background: radial-gradient(circle at top, #30204d, #100e20 75%);
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+.contenedor {
+    max-width: 900px;
+    margin: auto;
+}
+
+h1 {
+    color: #ff72bd;
+    font-size: 36px;
+    text-shadow: 0 0 18px #ff40a5;
+}
+
+.subtitulo {
+    color: #c8bedb;
+}
+
+.panel {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 22px 0;
+}
+
+.tarjeta {
+    background: #241d3c;
+    border: 1px solid #55416f;
+    border-radius: 13px;
+    padding: 13px 22px;
+    min-width: 115px;
+}
+
+.tarjeta span {
+    display: block;
+    color: #b9a9d0;
+    font-size: 13px;
+    margin-bottom: 7px;
+}
+
+.tarjeta strong {
+    color: #ff79bd;
+    font-size: 23px;
+}
+
+canvas {
+    width: 800px;
+    height: 450px;
+    max-width: 100%;
+    display: block;
+    margin: auto;
+    border: 2px solid #ff72bd;
+    border-radius: 15px;
+    box-shadow: 0 0 25px #e83b9b55;
+}
+
+.estado {
+    color: #f5b7dc;
+    margin: 15px;
+    min-height: 20px;
+}
+
+.botones {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+button {
+    border: none;
+    border-radius: 10px;
+    padding: 13px 24px;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+}
+
+#pausar {
+    background: #a78bfa;
+    color: #17112b;
+}
+
+#reiniciar {
+    background: #ff72bd;
+    color: #24102d;
+}
+
+.instrucciones {
+    color: #bdb3d0;
+    font-size: 13px;
+    line-height: 1.8;
+    margin-top: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="contenedor">
+
+    <h1>NEON BOUNCE</h1>
+    <p class="subtitulo">
+        ¡Sobrevive, consigue puntos y supera todos los niveles!
+    </p>
+
+    <div class="panel">
+
+        <div class="tarjeta">
+            <span>⭐ PUNTOS</span>
+            <strong id="puntos">0 / 8</strong>
+        </div>
+
+        <div class="tarjeta">
+            <span>❤️ VIDAS</span>
+            <strong id="vidas">❤️❤️❤️</strong>
+        </div>
+
+        <div class="tarjeta">
+            <span>🎮 NIVEL</span>
+            <strong id="nivel">1</strong>
+        </div>
+
+        <div class="tarjeta">
+            <span>↗ REBOTES</span>
+            <strong id="rebotes">0</strong>
+        </div>
+
+    </div>
+
+    <canvas id="juego" width="800" height="450"></canvas>
+
+    <div class="estado" id="mensaje">
+        ¡La partida está en marcha!
+    </div>
+
+    <div class="botones">
+        <button id="pausar" onclick="alternarPausa()">
+            ⏸ Pausar
+        </button>
+
+        <button id="reiniciar" onclick="reiniciarJuego()">
+            ↻ Nuevo juego
+        </button>
+    </div>
+
+    <div class="instrucciones">
+        ⬆ Arriba | ⬇ Abajo | ⬅ Izquierda | ➡ Derecha
+        <br>
+        ESPACIO: Pausar o continuar
+        <br>
+        ¡Evita los obstáculos rosas y consigue 8 rebotes por nivel!
+    </div>
+
+</div>
+
+<script>
+
+
+
+const canvas = document.getElementById("juego");
+const ctx = canvas.getContext("2d");
+
+const ancho = canvas.width;
+const alto = canvas.height;
+
+
+
+const pelota = {
+    x: 400,
+    y: 225,
+    radio: 22,
+    vx: 4,
+    vy: 3
+};
+
+
+
+let vidas = 3;
+let nivel = 1;
+let puntos = 0;
+let rebotes = 0;
+
+const meta = 8;
+
+let pausado = false;
+let gameOver = false;
+let invulnerable = 0;
+let aviso = 0;
+
+
+
+const niveles = [
+
+    [
+        {x:120, y:100, ancho:125, alto:24},
+        {x:525, y:115, ancho:140, alto:24},
+        {x:310, y:330, ancho:170, alto:24},
+        {x:75, y:270, ancho:90, alto:24},
+        {x:650, y:285, ancho:90, alto:24}
+    ],
+
+
+    [
+        {x:180, y:80, ancho:150, alto:24},
+        {x:470, y:90, ancho:160, alto:24},
+        {x:100, y:220, ancho:120, alto:24},
+        {x:550, y:245, ancho:130, alto:24},
+        {x:300, y:350, ancho:180, alto:24}
+    ],
+
+    [
+        {x:100, y:100, ancho:180, alto:24},
+        {x:500, y:100, ancho:180, alto:24},
+        {x:300, y:190, ancho:180, alto:24},
+        {x:100, y:320, ancho:150, alto:24},
+        {x:550, y:320, ancho:150, alto:24}
+    ]
+
+];
+
+let obstaculos = niveles[0];
+
+
+
+document.addEventListener("keydown", function(event) {
+
+    if (gameOver) return;
+
+    if ([
+        "ArrowUp",
+        "ArrowDown",
+        "ArrowLeft",
+        "ArrowRight",
+        " "
+    ].includes(event.key)) {
+        event.preventDefault();
+    }
+
+    if (event.key === "ArrowRight") {
+        pelota.vx = Math.abs(pelota.vx);
+    }
+
+    if (event.key === "ArrowLeft") {
+        pelota.vx = -Math.abs(pelota.vx);
+    }
+
+    if (event.key === "ArrowUp") {
+        pelota.vy = -Math.abs(pelota.vy);
+    }
+
+    if (event.key === "ArrowDown") {
+        pelota.vy = Math.abs(pelota.vy);
+    }
+
+    if (event.code === "Space" && !event.repeat) {
+        alternarPausa();
+    }
+
+});
+
+
+
+function dibujarFondo() {
+
+    const fondo = ctx.createLinearGradient(0, 0, ancho, alto);
+
+    fondo.addColorStop(0, "#17152d");
+    fondo.addColorStop(1, "#302044");
+
+    ctx.fillStyle = fondo;
+    ctx.fillRect(0, 0, ancho, alto);
+
+    ctx.strokeStyle = "#ffffff0b";
+
+    for (let i = 0; i < ancho; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i, alto);
+        ctx.stroke();
+    }
+
+    for (let i = 0; i < alto; i += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, i);
+        ctx.lineTo(ancho, i);
+        ctx.stroke();
+    }
+
+}
+
+
+
+function dibujarObstaculos() {
+
+    obstaculos.forEach(function(o) {
+
+        ctx.save();
+
+        ctx.shadowColor = "#ff45ad";
+        ctx.shadowBlur = 15;
+
+        ctx.fillStyle = "#ff4b9b";
+
+        ctx.beginPath();
+
+        ctx.roundRect(
+            o.x, o.y,
+            o.ancho, o.alto,
+            8
+        );
+
+        ctx.fill();
+
+        ctx.restore();
+
+    });
+
+}
+
+
+function dibujarPelota() {
+
+    if (invulnerable > 0 && Math.floor(invulnerable / 6) % 2 === 0) {
+        return;
+    }
+
+    ctx.save();
+
+    ctx.shadowColor = "#ff45ad";
+    ctx.shadowBlur = 25;
+
+    ctx.beginPath();
+
+    ctx.arc(
+        pelota.x,
+        pelota.y,
+        pelota.radio,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = "#ff70b5";
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+
+    ctx.fillStyle = "#25162b";
+
+    ctx.beginPath();
+
+    ctx.arc(pelota.x - 7, pelota.y - 4, 3, 0, Math.PI * 2);
+    ctx.arc(pelota.x + 7, pelota.y - 4, 3, 0, Math.PI * 2);
+
+    ctx.fill();
+
+    ctx.restore();
+
+}
+
+
+
+function perderVida() {
+
+    if (invulnerable > 0 || gameOver) return;
+
+    vidas--;
+
+    document.getElementById("mensaje").textContent =
+        "¡Cuidado! Has perdido una vida.";
+
+    if (vidas <= 0) {
+
+        gameOver = true;
+
+        document.getElementById("mensaje").textContent =
+            "GAME OVER - ¡Intenta nuevamente!";
+
+        return;
+    }
+
+
+    pelota.x = 400;
+    pelota.y = 225;
+
+    // Cambiar la dirección
+    pelota.vx = -pelota.vx;
+    pelota.vy = -pelota.vy;
+
+
+    invulnerable = 90;
+
+}
+
+
+function detectarColision(o) {
+
+    const cercanoX = Math.max(
+        o.x,
+        Math.min(pelota.x, o.x + o.ancho)
+    );
+
+    const cercanoY = Math.max(
+        o.y,
+        Math.min(pelota.y, o.y + o.alto)
+    );
+
+    const dx = pelota.x - cercanoX;
+    const dy = pelota.y - cercanoY;
+
+    const distancia = Math.sqrt(dx * dx + dy * dy);
+
+    if (distancia < pelota.radio) {
+
+        perderVida();
+        return true;
+
+    }
+
+    return false;
+
+}
+
+
+function detectarParedes() {
+
+    let choque = false;
+
+    if (pelota.x + pelota.radio >= ancho) {
+
+        pelota.x = ancho - pelota.radio;
+        pelota.vx = -Math.abs(pelota.vx);
+        choque = true;
+
+    }
+
+    if (pelota.x - pelota.radio <= 0) {
+
+        pelota.x = pelota.radio;
+        pelota.vx = Math.abs(pelota.vx);
+        choque = true;
+
+    }
+
+    if (pelota.y + pelota.radio >= alto) {
+
+        pelota.y = alto - pelota.radio;
+        pelota.vy = -Math.abs(pelota.vy);
+        choque = true;
+
+    }
+
+    if (pelota.y - pelota.radio <= 0) {
+
+        pelota.y = pelota.radio;
+        pelota.vy = Math.abs(pelota.vy);
+        choque = true;
+
+    }
+
+    if (choque) {
+
+        puntos++;
+        rebotes++;
+
+        if (puntos >= meta) {
+            siguienteNivel();
+        }
+
+    }
+
+}
+
+
+function siguienteNivel() {
+
+    nivel++;
+    puntos = 0;
+
+    
+    obstaculos = niveles[(nivel - 1) % niveles.length];
+
+
+    const rapidez = 4 + (nivel - 1) * 0.7;
+
+    pelota.vx = Math.sign(pelota.vx) * rapidez;
+    pelota.vy = Math.sign(pelota.vy) * (3 + (nivel - 1) * 0.5);
+
+
+    pelota.x = 400;
+    pelota.y = 225;
+
+
+    invulnerable = 90;
+
+    aviso = 100;
+
+    document.getElementById("mensaje").textContent =
+        "¡FELICIDADES! Has pasado al nivel " + nivel;
+
+}
+
+
+
+function actualizar() {
+
+    if (gameOver || pausado) return;
+
+    if (aviso > 0) aviso--;
+
+    if (invulnerable > 0) invulnerable--;
+
+    pelota.x += pelota.vx;
+    pelota.y += pelota.vy;
+
+    detectarParedes();
+
+    if (gameOver) return;
+
+    if (invulnerable === 0) {
+
+        for (const o of obstaculos) {
+
+            if (detectarColision(o)) {
+                break;
+            }
+
+        }
+
+    }
+
+    document.getElementById("puntos").textContent =
+        puntos + " / " + meta;
+
+    document.getElementById("vidas").textContent =
+        "❤️".repeat(vidas) + "🖤".repeat(3 - vidas);
+
+    document.getElementById("nivel").textContent = nivel;
+
+    document.getElementById("rebotes").textContent = rebotes;
+
+}
+
+
+
+function dibujarMensaje(texto, detalle) {
+
+    ctx.fillStyle = "#100e20dd";
+    ctx.fillRect(130, 145, 540, 150);
+
+    ctx.strokeStyle = "#ff72bd";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(130, 145, 540, 150);
+
+    ctx.textAlign = "center";
+
+    ctx.fillStyle = "#ff72bd";
+    ctx.font = "bold 34px Arial";
+    ctx.fillText(texto, 400, 205);
+
+    ctx.fillStyle = "white";
+    ctx.font = "18px Arial";
+    ctx.fillText(detalle, 400, 245);
+
+}
+
+
+
+function alternarPausa() {
+
+    if (gameOver) return;
+
+    pausado = !pausado;
+
+    document.getElementById("pausar").textContent =
+        pausado ? "▶ Continuar" : "⏸ Pausar";
+
+    document.getElementById("mensaje").textContent =
+        pausado ? "Juego pausado" : "¡La partida continúa!";
+
+}
+
+
+
+function reiniciarJuego() {
+
+    pelota.x = 400;
+    pelota.y = 225;
+
+    pelota.vx = 4;
+    pelota.vy = 3;
+
+    vidas = 3;
+    nivel = 1;
+    puntos = 0;
+    rebotes = 0;
+
+    pausado = false;
+    gameOver = false;
+    invulnerable = 0;
+    aviso = 0;
+
+    obstaculos = niveles[0];
+
+    document.getElementById("pausar").textContent =
+        "⏸ Pausar";
+
+    document.getElementById("mensaje").textContent =
+        "¡Nueva partida! Tienes 3 vidas.";
+
+    document.getElementById("puntos").textContent = "0 / 8";
+    document.getElementById("vidas").textContent = "❤️❤️❤️";
+    document.getElementById("nivel").textContent = 1;
+    document.getElementById("rebotes").textContent = 0;
+
+}
+
+function animar() {
+
+    ctx.clearRect(0, 0, ancho, alto);
+
+    dibujarFondo();
+
+    dibujarObstaculos();
+
+    actualizar();
+
+    dibujarPelota();
+
+    if (gameOver) {
+
+        dibujarMensaje(
+            "GAME OVER",
+            "Presiona NUEVO JUEGO"
+        );
+
+    } else if (pausado) {
+
+        dibujarMensaje(
+            "PAUSA",
+            "Presiona CONTINUAR"
+        );
+
+    } else if (aviso > 0) {
+
+        dibujarMensaje(
+            "¡NIVEL " + nivel + "!",
+            "¡Has desbloqueado el siguiente nivel!"
+        );
+
+    }
+
+    requestAnimationFrame(animar);
+
+}
+
+
+animar();
+
+</script>
+
+</body>
+</html>
